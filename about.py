@@ -466,7 +466,7 @@ ABOUT_PAGE = """<!DOCTYPE html>
   <section class="founder-section">
     <div class="founder-card reveal">
       <div class="founder-photo-wrapper">
-        <img class="founder-photo" src="/nirmal_hans.jpg" alt="Nirmal Hans – Founder of Car Solution" />
+        <img class="founder-photo" src="nirmal_hans.jpg" alt="Nirmal Hans – Founder of Car Solution" />
       </div>
       <div class="founder-info">
         <h2 class="founder-name">Nirmal Hans</h2>
