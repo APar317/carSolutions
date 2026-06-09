@@ -1,0 +1,588 @@
+import http.server
+import socketserver
+
+PORT = 8001
+
+SERVICES_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Car Solution | Premium Detailing Services</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* Premium Design Tokens */
+    :root {
+      --bg-base: #030712;
+      --bg-surface: #0b0f19;
+      --bg-surface-glass: rgba(11, 15, 25, 0.65);
+      --border-glass: rgba(255, 255, 255, 0.06);
+      --border-glass-hover: rgba(255, 255, 255, 0.12);
+      
+      --color-primary: #0ea5e9;       /* Cyan */
+      --color-primary-rgb: 14, 165, 233;
+      --color-secondary: #6366f1;     /* Indigo */
+      --color-secondary-rgb: 99, 102, 241;
+      --color-accent: #f43f5e;        /* Rose */
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dark: #64748b;
+      
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      
+      --glow-cyan: 0 0 25px rgba(14, 165, 233, 0.25);
+      --glow-indigo: 0 0 25px rgba(99, 102, 241, 0.25);
+    }
+
+    /* Reset & Core Styling */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      min-height: 100vh;
+      line-height: 1.6;
+      /* Ambient glow spots */
+      background-image: 
+        radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 10% 90%, rgba(14, 165, 233, 0.1) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input, select {
+      font-family: inherit;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Glassmorphic Navbar */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 100;
+      background: var(--bg-surface-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-glass);
+      transition: all 0.3s ease;
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 80px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #f8fafc 40%, var(--color-primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.25s ease;
+      position: relative;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: var(--color-primary);
+      transition: width 0.25s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--text-main);
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    /* Buttons Component */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+      color: #020617;
+      font-weight: 700;
+      box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(14, 165, 233, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-glass-hover);
+      transform: translateY(-2px);
+    }
+
+    .btn-sm {
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      border-radius: 8px;
+    }
+
+    /* Page Intro */
+    .services-intro {
+      padding-top: 160px;
+      padding-bottom: 50px;
+      text-align: center;
+    }
+
+    .intro-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 3rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .intro-title span {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .intro-desc {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Services Grid Section */
+    .services-section {
+      padding-bottom: 100px;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+
+    @media (min-width: 768px) {
+      .services-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 992px) {
+      .services-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Service Card (Box) */
+    .service-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .service-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(14, 165, 233, 0.3);
+      box-shadow: 0 20px 40px -10px rgba(14, 165, 233, 0.1);
+    }
+
+    .service-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--color-primary), var(--color-secondary));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .service-card:hover::before {
+      opacity: 1;
+    }
+
+    .service-icon-wrap {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-primary);
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .service-card:hover .service-icon-wrap {
+      background: rgba(14, 165, 233, 0.1);
+      border-color: rgba(14, 165, 233, 0.2);
+    }
+
+    .service-name {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    .service-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 28px;
+      flex-grow: 1;
+    }
+
+    .service-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-glass);
+      padding-top: 20px;
+      margin-top: auto;
+    }
+
+    .service-price {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .service-price span {
+      font-size: 0.85rem;
+      color: var(--color-primary);
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    /* Footer */
+    .footer {
+      background: #020617;
+      border-top: 1px solid var(--border-glass);
+      padding: 48px 0;
+      text-align: center;
+      color: var(--text-dark);
+      font-size: 0.9rem;
+    }
+
+    .footer-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--text-main);
+      margin-bottom: 16px;
+    }
+
+    .footer-text {
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="http://localhost:8000" class="logo">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        Car Solution
+      </a>
+      
+      <nav class="nav-links">
+        <a href="http://localhost:8000" class="nav-link">Home</a>
+        <a href="#" class="nav-link">Services</a>
+        <a href="http://localhost:8002" class="nav-link">Pricing</a>
+        <a href="http://localhost:8003" class="nav-link">Packages</a>
+        <a href="http://localhost:8004" class="btn btn-primary btn-sm">Book Appointment</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Page Intro -->
+  <section class="services-intro">
+    <div class="container">
+      <h1 class="intro-title">Our Detailing <span>Services</span></h1>
+      <p class="intro-desc">Expert restoration and protective finishes applied to every centimeter of your automobile.</p>
+    </div>
+  </section>
+
+  <!-- Services Grid -->
+  <section class="services-section">
+    <div class="container">
+      <div class="services-grid">
+        
+        <!-- 1. Car washing & scrubbing -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Car Washing & Scrubbing</h3>
+          <p class="service-desc">Complete exterior foam bath combined with a thorough hand scrubbing of contaminants, restoring initial paint glossiness.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 999</div>
+            <a href="http://localhost:8004/?type=service&id=scrubbing" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 2. Exterior car wash -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Exterior Car Wash</h3>
+          <p class="service-desc">A premium touchless high-pressure washing, gentle microfiber drying, and synthetic sealant application for daily shine.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 499</div>
+            <a href="http://localhost:8004/?type=service&id=exterior" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 3. Interior cleaning -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Interior Cleaning</h3>
+          <p class="service-desc">Deep cleaning, sanitation, and stain extraction of seats, door panels, and roof linings, refreshing the entire cabin atmosphere.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 899</div>
+            <a href="http://localhost:8004/?type=service&id=interior" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 4. Vacuum cleaning -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="22" y1="12" x2="18" y2="12"/>
+              <line x1="6" y1="12" x2="2" y2="12"/>
+              <line x1="12" y1="6" x2="12" y2="2"/>
+              <line x1="12" y1="22" x2="12" y2="18"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Vacuum Cleaning</h3>
+          <p class="service-desc">Deep carpet and boot suction cleaning using professional machinery to eliminate embedded dust, crumbs, and microscopic dirt.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 299</div>
+            <a href="http://localhost:8004/?type=service&id=vacuum" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 5. Dashboard cleaning -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="3" x2="9" y2="21"/>
+              <line x1="15" y1="3" x2="15" y2="21"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="3" y1="15" x2="21" y2="15"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Dashboard Cleaning</h3>
+          <p class="service-desc">Detailed console wipe down, chemical purification, and application of a UV protection layer to stop cracking and preserve finish.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 349</div>
+            <a href="http://localhost:8004/?type=service&id=dashboard" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 6. Glass and mirror cleaning -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Glass & Mirror Cleaning</h3>
+          <p class="service-desc">Streak-free glass polishing of windshields, windows, and rear-view mirrors to secure perfect optical clarity during night drives.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 199</div>
+            <a href="http://localhost:8004/?type=service&id=glass" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 7. Tire and wheel cleaning -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="4"/>
+              <line x1="12" y1="2" x2="12" y2="8"/>
+              <line x1="12" y1="16" x2="12" y2="22"/>
+              <line x1="2" y1="12" x2="8" y2="12"/>
+              <line x1="16" y1="12" x2="22" y2="12"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Tire & Wheel Cleaning</h3>
+          <p class="service-desc">Complete extraction of brake dust, rust spots, rim scrubbing, followed by high-quality rubber tyre nourishment glaze.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 249</div>
+            <a href="http://localhost:8004/?type=service&id=tire" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+        <!-- 8. Pressure washing -->
+        <div class="service-card">
+          <div class="service-icon-wrap">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <h3 class="service-name">Pressure Washing</h3>
+          <p class="service-desc">Heavy-duty undercarriage and wheel arch pressure blasting to wash off mud, road salts, and chemical buildup causing rust.</p>
+          <div class="service-footer">
+            <div class="service-price"><span>RS</span> 399</div>
+            <a href="http://localhost:8004/?type=service&id=pressure" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-logo">Car Solution</div>
+      <p class="footer-text">Professional Auto Aesthetics & Detailing Science.</p>
+      <p>&copy; 2026 Car Solution. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>"""
+
+class ServicesHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path in ("/", "/services", "/index", "/index.html"):
+            self.send_response(200)
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(SERVICES_PAGE.encode("utf-8"))
+        else:
+            self.send_error(404, "Page not found")
+
+    def log_message(self, format, *args):
+        return
+
+if __name__ == "__main__":
+    with socketserver.TCPServer(("", PORT), ServicesHandler) as httpd:
+        print(f"Serving Car Solution services page at http://localhost:{PORT}")
+        httpd.serve_forever()
